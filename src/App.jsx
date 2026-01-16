@@ -539,23 +539,36 @@ const UserManagementModal = ({ isOpen, onClose, sessions }) => {
 };
 
 // ==================== DATA REPOSITORY MODAL ====================
-const DataRepositoryModal = ({ isOpen, onClose, driveFiles, onFileView }) => {
-  const [activeFolder, setActiveFolder] = useState('ALL');
-  const [searchTerm, setSearchTerm] = useState('');
+const REPOSITORY_FOLDERS = [
+  {
+    id: 1,
+    name: 'Pitch Deck',
+    icon: 'fa-file-powerpoint',
+    url: 'https://drive.google.com/drive/folders/16dEnuE4Aml9asy6tmn3a8AqtRUn08PTE?usp=drive_link',
+    description: 'Company pitch deck and investor presentations'
+  },
+  {
+    id: 2,
+    name: 'MIS',
+    icon: 'fa-file-excel',
+    url: 'https://drive.google.com/drive/folders/1hJVr0xzckP_iSMZekXmkAGm_IaGmyHNU?usp=drive_link',
+    description: 'Management Information System reports'
+  },
+  {
+    id: 3,
+    name: 'Audited Financials',
+    icon: 'fa-file-pdf',
+    url: 'https://drive.google.com/drive/folders/138WYK9a_5kOLRkVCSllR8fD-peJ8JvrG?usp=drive_link',
+    description: 'Audited financial statements and reports'
+  }
+];
 
+const DataRepositoryModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  const folders = ['ALL', ...Object.keys(DRIVE_FOLDERS)];
-
-  let filteredFiles = driveFiles;
-  if (activeFolder !== 'ALL') {
-    filteredFiles = filteredFiles.filter(f => f.folder === activeFolder);
-  }
-  if (searchTerm) {
-    filteredFiles = filteredFiles.filter(f =>
-      f.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
+  const handleFolderClick = (folder) => {
+    window.open(folder.url, '_blank');
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -566,63 +579,71 @@ const DataRepositoryModal = ({ isOpen, onClose, driveFiles, onFileView }) => {
         </div>
 
         <div className="modal-body">
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <div className="input-wrapper" style={{ flex: 1 }}>
-              <i className="fas fa-search"></i>
-              <input
-                type="text"
-                placeholder="Search documents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+          <div className="cdc-card white" style={{ marginBottom: '20px', padding: '16px' }}>
+            <p style={{ margin: 0, color: '#666' }}>
+              <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
+              Click on any folder below to access the documents in Google Drive
+            </p>
           </div>
 
-          <div className="folder-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            {folders.map(folder => (
-              <button
-                key={folder}
-                onClick={() => setActiveFolder(folder)}
-                className={`stat-pill ${activeFolder === folder ? '' : 'inactive'}`}
+          <div className="repository-list">
+            {REPOSITORY_FOLDERS.map((folder, index) => (
+              <div
+                key={folder.id}
+                className="repository-item cdc-card white"
+                onClick={() => handleFolderClick(folder)}
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '20px',
+                  marginBottom: '12px',
                   cursor: 'pointer',
-                  background: activeFolder === folder ? 'var(--lime)' : 'var(--white)',
-                  border: '2px solid var(--black)'
+                  transition: 'all 0.2s ease',
+                  border: '3px solid var(--black)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--lime)';
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--white)';
+                  e.currentTarget.style.transform = 'translateX(0)';
                 }}
               >
-                <div className="stat-pill-value" style={{ fontSize: '12px' }}>
-                  {folder.replace(/_/g, ' ')}
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  background: 'var(--lime)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid var(--black)',
+                  flexShrink: 0
+                }}>
+                  <i className={`fas ${folder.icon}`} style={{ fontSize: '20px' }}></i>
                 </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-3">
-            {filteredFiles.map(file => (
-              <div
-                key={file.id}
-                className="doc-card"
-                onClick={() => onFileView(file)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="doc-card-icon">
-                  <i className={`fas fa-file-${file.mimeType?.includes('pdf') ? 'pdf' : file.mimeType?.includes('presentation') ? 'powerpoint' : file.mimeType?.includes('spreadsheet') ? 'excel' : 'alt'}`}></i>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '16px' }}>{index + 1}. {folder.name}</span>
+                    <i className="fas fa-external-link-alt" style={{ fontSize: '12px', color: '#666' }}></i>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#666' }}>{folder.description}</div>
                 </div>
-                <div className="doc-card-info">
-                  <div className="doc-card-name">{file.name}</div>
-                  <div className="doc-card-meta">{file.folder.replace(/_/g, ' ')}</div>
-                  {file.modifiedTime && <div className="doc-card-date">{formatDate(file.modifiedTime)}</div>}
+                <div style={{
+                  background: 'var(--black)',
+                  color: 'var(--lime)',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  Open Folder
                 </div>
               </div>
             ))}
           </div>
-
-          {filteredFiles.length === 0 && (
-            <div className="cdc-card white" style={{ textAlign: 'center', padding: '40px' }}>
-              <i className="fas fa-folder-open" style={{ fontSize: '48px', color: '#ccc', marginBottom: '16px' }}></i>
-              <p>No documents found</p>
-            </div>
-          )}
         </div>
 
         <div className="modal-footer">
@@ -1472,8 +1493,6 @@ const Dashboard = ({ user, isAdmin }) => {
       <DataRepositoryModal
         isOpen={dataRepositoryOpen}
         onClose={() => setDataRepositoryOpen(false)}
-        driveFiles={driveFiles}
-        onFileView={handleFileView}
       />
     </div>
   );
