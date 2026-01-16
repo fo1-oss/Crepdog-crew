@@ -1,7 +1,7 @@
 {
   "name": "cdc-investor-dataroom",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,9 @@
     "lucide-react": "^0.263.1",
     "pdfjs-dist": "^4.0.379",
     "xlsx": "^0.18.5",
-    "tesseract.js": "^5.0.4"
+    "tesseract.js": "^5.0.4",
+    "recharts": "^2.12.0",
+    "date-fns": "^3.3.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

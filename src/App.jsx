@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  auth, 
-  loginWithEmail, 
-  loginWithGoogle, 
-  logout, 
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import {
+  auth,
+  loginWithEmail,
+  loginWithGoogle,
+  logout,
   onAuthStateChanged,
   ADMIN_EMAILS,
   DRIVE_API_KEY,
@@ -18,171 +22,49 @@ import {
   getDataCards
 } from './firebase';
 
-// ==================== AI KNOWLEDGE BASE ====================
-const aiKnowledgeBase = {
-  "revenue": `<strong>Revenue Performance:</strong><br><br>
-    <strong>FY24 Audited:</strong> ₹18.2 Cr<br>
-    <strong>FY23 Audited:</strong> ₹8.5 Cr<br>
-    <strong>YoY Growth:</strong> <span style="background:var(--lime);padding:2px 8px;border-radius:4px;">114%</span><br><br>
-    <strong>FY26 YTD (Apr-Dec):</strong> ₹66.5 Cr<br>
-    • Online: ₹41.9 Cr (63%)<br>
-    • Retail: ₹24.6 Cr (37%)`,
+// ==================== CHART DATA ====================
+const revenueData = [
+  { year: 'FY21', revenue: 1.2, growth: 0 },
+  { year: 'FY22', revenue: 3.8, growth: 217 },
+  { year: 'FY23', revenue: 8.5, growth: 124 },
+  { year: 'FY24', revenue: 18.2, growth: 114 },
+  { year: 'FY25E', revenue: 45, growth: 147 },
+];
 
-  "net profit|profit|profitability": `<strong>Profitability:</strong><br><br>
-    <strong>FY24:</strong> Net Profit ₹6.18 Cr (34% margin)<br>
-    <strong>FY23:</strong> Net Profit ₹56.2 L<br><br>
-    <strong>Key Ratios:</strong><br>
-    • ROE: 58.6%<br>
-    • ROCE: 56.3%<br>
-    • Operating Margin: 35%`,
+const channelData = [
+  { name: 'Online', value: 41.9, color: '#C0E529' },
+  { name: 'Retail', value: 24.6, color: '#4A5D23' },
+];
 
-  "store|retail|delhi|mumbai|hyderabad": `<strong>Retail Store Performance (FY26 YTD):</strong><br><br>
-    <strong>Delhi (CP):</strong> ₹11.9 Cr | CM2: 14.8%<br>
-    <strong>Mumbai (Bandra):</strong> ₹9.2 Cr | CM2: 17.5%<br>
-    <strong>Hyderabad (Jubilee):</strong> ₹3.5 Cr | CM2: 18.2%<br><br>
-    <strong>Total Retail:</strong> ₹24.6 Cr (37% of revenue)`,
+const storePerformanceData = [
+  { store: 'Delhi CP', revenue: 11.9, cm2: 14.8, transactions: 2450 },
+  { store: 'Mumbai Bandra', revenue: 9.2, cm2: 17.5, transactions: 1890 },
+  { store: 'Hyderabad JH', revenue: 3.5, cm2: 18.2, transactions: 720 },
+];
 
-  "ltv|cac|unit economics": `<strong>Unit Economics:</strong><br><br>
-    <strong>LTV:CAC Ratio:</strong> <span style="background:var(--lime);padding:2px 8px;border-radius:4px;">62:1</span><br>
-    <strong>Customer Acquisition Cost:</strong> ₹250<br>
-    <strong>Lifetime Value:</strong> ₹15,500<br><br>
-    <strong>Contribution Margins:</strong><br>
-    • Online CM2: 7.8%<br>
-    • Retail CM2: 16.9%`,
+const monthlyRevenueData = [
+  { month: 'Apr', fy24: 1.2, fy25: 3.8 },
+  { month: 'May', fy24: 1.4, fy25: 4.2 },
+  { month: 'Jun', fy24: 1.1, fy25: 4.8 },
+  { month: 'Jul', fy24: 1.5, fy25: 5.1 },
+  { month: 'Aug', fy24: 1.8, fy25: 5.9 },
+  { month: 'Sep', fy24: 2.1, fy25: 6.4 },
+  { month: 'Oct', fy24: 2.4, fy25: 7.2 },
+  { month: 'Nov', fy24: 2.2, fy25: 7.8 },
+  { month: 'Dec', fy24: 2.5, fy25: 8.5 },
+];
 
-  "gross margin|margin": `<strong>Margin Analysis:</strong><br><br>
-    <strong>Gross Margin:</strong> 45% (FY24)<br>
-    <strong>Operating Margin:</strong> 35%<br>
-    <strong>Net Margin:</strong> 34%<br><br>
-    <strong>Channel-wise:</strong><br>
-    • Online CM2: 7.8%<br>
-    • Retail CM2: 16.9%`,
+const profitabilityData = [
+  { metric: 'Gross Margin', value: 45, benchmark: 35 },
+  { metric: 'Operating Margin', value: 35, benchmark: 15 },
+  { metric: 'Net Margin', value: 34, benchmark: 10 },
+];
 
-  "balance sheet|assets": `<strong>Balance Sheet Highlights (FY24):</strong><br><br>
-    <strong>Assets:</strong><br>
-    • Cash & Bank: ₹6.16 Cr<br>
-    • Inventory: ₹4.2 Cr<br>
-    • Receivables: ₹1.8 Cr<br><br>
-    <strong>Key Ratios:</strong><br>
-    • Current Ratio: 2.8x<br>
-    • Debt/Equity: 0.12x`,
-
-  "business model|how does|model": `<strong>Business Model - Sale or Return (SOR):</strong><br><br>
-    <strong>How it works:</strong><br>
-    1. Consignors list products on CDC<br>
-    2. CDC markets & sells to customers<br>
-    3. Payment to consignor only after sale<br><br>
-    <strong>Benefits:</strong><br>
-    • Zero inventory risk<br>
-    • Asset-light operations<br>
-    • Scalable model`,
-
-  "online|website|ecommerce": `<strong>Online Performance (FY26 YTD):</strong><br><br>
-    <strong>Revenue:</strong> ₹41.9 Cr (63% of total)<br>
-    <strong>Monthly Visitors:</strong> 600K+<br>
-    <strong>CM2 Margin:</strong> 7.8%<br><br>
-    <strong>Note:</strong> Retail stores show better profitability (CM2: 16.9%) due to lower marketing costs.`,
-
-  "10 reasons|reasons to invest|why invest": `<strong>🔥 10 Reasons to Invest in CDC:</strong><br><br>
-    <strong>1. Market Leader</strong> - India's #1 sneaker platform, 600K+ monthly visitors<br>
-    <strong>2. Explosive Growth</strong> - ₹8.5 Cr → ₹18.2 Cr (114% YoY)<br>
-    <strong>3. Profitable & Cash-Rich</strong> - Net Profit ₹6.18 Cr, Cash ₹6.16 Cr<br>
-    <strong>4. Strong Unit Economics</strong> - LTV:CAC 62:1<br>
-    <strong>5. Asset-Light Model</strong> - SOR reduces inventory risk<br>
-    <strong>6. Marquee Investors</strong> - PharmEasy founders, Masaba Gupta<br>
-    <strong>7. Multi-Channel</strong> - Website + 3 experiential stores<br>
-    <strong>8. Platform Play</strong> - 50+ Indian streetwear brands<br>
-    <strong>9. Large Market</strong> - India sneaker market growing 15%+ annually<br>
-    <strong>10. Clear Roadmap</strong> - 35 stores in 3-5 years`,
-
-  "investor|funded|raised": `<strong>CDC Investor Base:</strong><br><br>
-    <strong>Marquee Investors:</strong><br>
-    • Dharmil Seth (Co-founder, PharmEasy)<br>
-    • Siddharth Shah (Co-founder, PharmEasy)<br>
-    • Masaba Gupta (Fashion Designer)<br>
-    • Nikhil Mehra (Fashion Designer)<br>
-    • Rahul Kayan (Director, SMIFS Ltd)<br>
-    • Harminder Sahni (Founder, Wazir Advisors)<br><br>
-    <strong>Total Raised:</strong> ~₹14 Crores in seed funding`,
-
-  "shareholding|ownership|equity": `<strong>Shareholding Pattern:</strong><br><br>
-    <strong>Promoter Holdings:</strong><br>
-    • Anchit Kapil (CEO): 29.46%<br>
-    • Shaurya Kumar: 29.46%<br>
-    • Bharat Mehrotra: 29.46%<br><br>
-    <strong>Investor Holdings (CCPS):</strong> 11.63%<br><br>
-    <strong>Capital Structure:</strong><br>
-    • Equity Shares: 15,000 (₹10 face value)<br>
-    • CCPS: 1,975 shares`,
-
-  "growth|expansion|plan": `<strong>Growth Strategy:</strong><br><br>
-    <strong>📍 Store Expansion:</strong><br>
-    • Next: Colaba, South Mumbai (Jan 2025)<br>
-    • Target: 15 stores in next 2 years<br>
-    • Vision: 35 stores across India in 3-5 years<br><br>
-    <strong>💰 Revenue Targets:</strong><br>
-    • FY24 Actual: ₹18.2 Cr<br>
-    • FY25 Target: ₹45 Cr (2.5x)`,
-
-  "founder|team|anchit|ceo": `<strong>Founding Team:</strong><br><br>
-    <strong>Anchit Kapil - CEO & Co-founder</strong><br>
-    • Director Remuneration: ₹24 Lakhs/year<br><br>
-    <strong>Shaurya Kumar - Co-founder</strong><br>
-    • Director Remuneration: ₹24 Lakhs/year<br><br>
-    <strong>Bharat Mehrotra - Co-founder</strong><br>
-    • Strategic & Operations<br><br>
-    <strong>Origin:</strong> Started 2019 searching for Yeezys, built Instagram community → India's largest sneaker platform`,
-
-  "product|category|brand|sell": `<strong>Product Categories:</strong><br><br>
-    <strong>👟 Sneakers (84% of GMV):</strong><br>
-    Nike, Jordan, Adidas, Yeezy, New Balance, HOKA, Louis Vuitton, Dior, Balenciaga<br><br>
-    <strong>👕 Streetwear (16% of GMV):</strong><br>
-    50+ Indian brands: Balav, Farak, Kilogram, Natty Garb, Huemn<br><br>
-    <strong>⌚ Watches:</strong> Casio, G-Shock, Omega x Swatch<br>
-    <strong>🎭 Collectibles:</strong> Bearbricks, KAWS, Funko`,
-
-  "risk|challenge": `<strong>Key Risks & Mitigants:</strong><br><br>
-    <strong>⚠️ Operational:</strong><br>
-    1. Mumbai Store Fire (June 2024) - Insurance claim filed<br>
-    2. Counterfeit Risk - 100% authenticity guarantee<br>
-    3. Inventory Obsolescence - Dropshipping model<br><br>
-    <strong>✅ Mitigants:</strong><br>
-    Strong cash (₹6.16 Cr), omnichannel, consignment model`,
-
-  "competition|competitor": `<strong>Competitive Landscape:</strong><br><br>
-    <strong>Direct Competitors:</strong><br>
-    • Superkicks India<br>
-    • Culture Circle (raised $2M)<br>
-    • DawnTown, Mainstreet Marketplace<br><br>
-    <strong>CDC Advantages:</strong><br>
-    1. Experiential retail - Asia's largest sneaker wall<br>
-    2. Indian streetwear - Exclusive partnerships<br>
-    3. First-mover - Community since 2019<br>
-    4. Omnichannel - Website + 3 stores`
-};
-
-const findAIAnswer = (query) => {
-  query = query.toLowerCase();
-  for (let key in aiKnowledgeBase) {
-    const patterns = key.split('|');
-    for (let pattern of patterns) {
-      if (query.includes(pattern.toLowerCase())) {
-        return aiKnowledgeBase[key];
-      }
-    }
-  }
-  // Additional matching
-  if (query.includes('gmv') || query.includes('sales') || query.includes('turnover')) return aiKnowledgeBase['revenue'];
-  if (query.includes('invest') && (query.includes('why') || query.includes('reason'))) return aiKnowledgeBase['10 reasons|reasons to invest|why invest'];
-  
-  return `I have comprehensive data on CDC covering:<br><br>
-    📊 <strong>Financials:</strong> FY23 & FY24 audited statements, YTD FY26 MIS<br>
-    🏪 <strong>Operations:</strong> Store-wise P&L, unit economics<br>
-    📈 <strong>Growth:</strong> Revenue trajectory, expansion plans<br>
-    💰 <strong>Investment:</strong> Thesis, investor base, shareholding<br>
-    ⚠️ <strong>Risks:</strong> Key challenges and mitigants<br><br>
-    Try: "Net profit FY24", "10 reasons to invest", "Store performance", "Unit economics"`;
-};
+const categoryData = [
+  { name: 'Sneakers', value: 84, color: '#C0E529' },
+  { name: 'Streetwear', value: 12, color: '#6B8E23' },
+  { name: 'Accessories', value: 4, color: '#3D4A2B' },
+];
 
 // ==================== UTILITIES ====================
 const formatDate = (date) => {
@@ -204,6 +86,9 @@ const getLocationData = async () => {
   } catch { return { city: 'Unknown', country: 'Unknown' }; }
 };
 
+// Chart color palette
+const COLORS = ['#C0E529', '#6B8E23', '#4A5D23', '#3D4A2B', '#000000'];
+
 // ==================== LOGIN PAGE ====================
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -216,23 +101,23 @@ const LoginPage = () => {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
-    try { 
-      await loginWithEmail(email, password); 
-    } catch (err) { 
-      setError(err.message.includes('invalid') ? 'Invalid email or password' : err.message); 
-    } finally { 
-      setLoading(false); 
+    try {
+      await loginWithEmail(email, password);
+    } catch (err) {
+      setError(err.message.includes('invalid') ? 'Invalid email or password' : err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     setError(''); setLoading(true);
-    try { 
-      await loginWithGoogle(); 
-    } catch { 
-      setError('Google sign-in failed. Please try again.'); 
-    } finally { 
-      setLoading(false); 
+    try {
+      await loginWithGoogle();
+    } catch {
+      setError('Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -279,12 +164,12 @@ const LoginPage = () => {
               <label>Email Address</label>
               <div className="input-wrapper">
                 <i className="fas fa-envelope"></i>
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder={activeTab === 'admin' ? 'admin@crepdogcrew.com' : 'investor@company.com'} 
-                  required 
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={activeTab === 'admin' ? 'admin@crepdogcrew.com' : 'investor@company.com'}
+                  required
                 />
               </div>
             </div>
@@ -293,12 +178,12 @@ const LoginPage = () => {
               <label>Password</label>
               <div className="input-wrapper">
                 <i className="fas fa-lock"></i>
-                <input 
-                  type={showPassword ? 'text' : 'password'} 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="Enter your password" 
-                  required 
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="toggle-password">
                   <i className={`fas fa-eye${showPassword ? '-slash' : ''}`}></i>
@@ -326,178 +211,6 @@ const LoginPage = () => {
           <p className="login-footer">
             By signing in, you agree to our Terms of Service and Privacy Policy.
           </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ==================== OCR READER MODAL ====================
-const OCRReaderModal = ({ isOpen, onClose, onDataExtracted }) => {
-  const [files, setFiles] = useState([]);
-  const [processing, setProcessing] = useState(false);
-  const [results, setResults] = useState([]);
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const handleDrag = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
-    else if (e.type === "dragleave") setDragActive(false);
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(Array.from(e.dataTransfer.files));
-    }
-  }, []);
-
-  const handleFiles = (fileList) => {
-    const validFiles = fileList.filter(f => 
-      f.type === 'application/pdf' || f.type.startsWith('image/')
-    );
-    setFiles(prev => [...prev, ...validFiles]);
-  };
-
-  const processFiles = async () => {
-    setProcessing(true);
-    const processedResults = [];
-
-    for (const file of files) {
-      try {
-        // Simulate OCR processing (in production, use actual OCR API)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const mockData = {
-          fileName: file.name,
-          extractedData: {
-            revenue: '₹18.2 Cr',
-            profit: '₹6.18 Cr',
-            growth: '114%',
-            date: new Date().toISOString()
-          },
-          confidence: 0.95,
-          rawText: `Sample extracted text from ${file.name}...`
-        };
-        processedResults.push(mockData);
-      } catch (err) {
-        processedResults.push({ fileName: file.name, error: err.message });
-      }
-    }
-
-    setResults(processedResults);
-    setProcessing(false);
-  };
-
-  const handleImport = () => {
-    if (onDataExtracted) {
-      onDataExtracted(results);
-    }
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2><i className="fas fa-file-alt"></i> OCR Document Reader</h2>
-          <button className="modal-close" onClick={onClose}><i className="fas fa-times"></i></button>
-        </div>
-
-        <div className="modal-body">
-          {/* Upload Zone */}
-          <div 
-            className={`upload-zone ${dragActive ? 'active' : ''}`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="application/pdf,image/*"
-              onChange={(e) => handleFiles(Array.from(e.target.files))}
-              style={{ display: 'none' }}
-            />
-            <i className="fas fa-cloud-upload-alt"></i>
-            <p><strong>Drop files here</strong> or click to browse</p>
-            <span>Supports PDF, PNG, JPG files</span>
-          </div>
-
-          {/* File List */}
-          {files.length > 0 && (
-            <div className="file-list">
-              <h4>Selected Files ({files.length})</h4>
-              {files.map((file, i) => (
-                <div key={i} className="file-item">
-                  <i className={`fas fa-file-${file.type.includes('pdf') ? 'pdf' : 'image'}`}></i>
-                  <span>{file.name}</span>
-                  <span className="file-size">{(file.size / 1024).toFixed(1)} KB</span>
-                  <button onClick={() => setFiles(files.filter((_, idx) => idx !== i))}>
-                    <i className="fas fa-trash"></i>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Processing Status */}
-          {processing && (
-            <div className="processing-status">
-              <div className="spinner"></div>
-              <p>Processing documents with OCR...</p>
-            </div>
-          )}
-
-          {/* Results */}
-          {results.length > 0 && !processing && (
-            <div className="ocr-results">
-              <h4>Extracted Data</h4>
-              {results.map((r, i) => (
-                <div key={i} className="result-card">
-                  <div className="result-header">
-                    <strong>{r.fileName}</strong>
-                    {r.confidence && <span className="badge green">{(r.confidence * 100).toFixed(0)}% confidence</span>}
-                  </div>
-                  {r.error ? (
-                    <p className="error">{r.error}</p>
-                  ) : (
-                    <div className="extracted-fields">
-                      {Object.entries(r.extractedData).map(([key, value]) => (
-                        <div key={key} className="field">
-                          <label>{key}:</label>
-                          <span>{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          {files.length > 0 && !results.length && (
-            <button className="btn-primary" onClick={processFiles} disabled={processing}>
-              {processing ? 'Processing...' : 'Process Files'}
-            </button>
-          )}
-          {results.length > 0 && (
-            <button className="btn-primary" onClick={handleImport}>
-              <i className="fas fa-download"></i> Import Data
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -568,40 +281,38 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
         </div>
 
         <div className="modal-body">
-          {/* Add New Card Button */}
           {!showAddForm && (
             <button className="btn-primary" onClick={() => setShowAddForm(true)} style={{ marginBottom: '20px' }}>
               <i className="fas fa-plus"></i> Add New Card
             </button>
           )}
 
-          {/* Add Card Form */}
           {showAddForm && (
             <div className="card-form cdc-card white">
               <h4>New Data Card</h4>
               <div className="form-row">
-                <select 
-                  value={newCard.category} 
+                <select
+                  value={newCard.category}
                   onChange={(e) => setNewCard({ ...newCard, category: e.target.value })}
                 >
                   <option value="">Select Category</option>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
-                <input 
-                  type="text" 
-                  placeholder="Card Title" 
+                <input
+                  type="text"
+                  placeholder="Card Title"
                   value={newCard.title}
                   onChange={(e) => setNewCard({ ...newCard, title: e.target.value })}
                 />
               </div>
-              
+
               <div className="fields-section">
                 <h5>Fields</h5>
                 {newCard.fields.map((field, i) => (
                   <div key={i} className="field-row">
-                    <input 
-                      type="text" 
-                      placeholder="Label" 
+                    <input
+                      type="text"
+                      placeholder="Label"
                       value={field.label}
                       onChange={(e) => {
                         const fields = [...newCard.fields];
@@ -609,9 +320,9 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
                         setNewCard({ ...newCard, fields });
                       }}
                     />
-                    <input 
-                      type="text" 
-                      placeholder="Value" 
+                    <input
+                      type="text"
+                      placeholder="Value"
                       value={field.value}
                       onChange={(e) => {
                         const fields = [...newCard.fields];
@@ -637,7 +348,6 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
             </div>
           )}
 
-          {/* Cards Grid */}
           <div className="cards-grid">
             {cards.map(card => (
               <div key={card.id} className={`data-card cdc-card ${editingCard === card.id ? 'editing' : ''}`}>
@@ -657,10 +367,10 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
                     )}
                   </div>
                 </div>
-                
+
                 {editingCard === card.id ? (
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={card.title}
                     onChange={(e) => {
                       const updated = cards.map(c => c.id === card.id ? { ...c, title: e.target.value } : c);
@@ -678,8 +388,8 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
                       <div className="metric-row-icon"><i className="fas fa-chart-line"></i></div>
                       {editingCard === card.id ? (
                         <>
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             value={field.label}
                             onChange={(e) => {
                               const updated = cards.map(c => {
@@ -691,8 +401,8 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
                               setCards(updated);
                             }}
                           />
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             value={field.value}
                             onChange={(e) => {
                               const updated = cards.map(c => {
@@ -727,6 +437,202 @@ const DataCardsEditor = ({ isOpen, onClose, dataCards, onSave, onUpdate, onDelet
   );
 };
 
+// ==================== USER MANAGEMENT MODAL (Admin) ====================
+const UserManagementModal = ({ isOpen, onClose, sessions }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+
+  if (!isOpen) return null;
+
+  const uniqueUsers = sessions.reduce((acc, session) => {
+    if (!acc[session.email]) {
+      acc[session.email] = {
+        email: session.email,
+        displayName: session.displayName || session.email?.split('@')[0],
+        sessions: [],
+        lastLogin: session.createdAt,
+        totalSessions: 0
+      };
+    }
+    acc[session.email].sessions.push(session);
+    acc[session.email].totalSessions++;
+    return acc;
+  }, {});
+
+  let userList = Object.values(uniqueUsers);
+
+  if (searchTerm) {
+    userList = userList.filter(u =>
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  if (sortBy === 'recent') {
+    userList.sort((a, b) => {
+      const dateA = a.lastLogin?.toDate?.() || new Date(a.lastLogin);
+      const dateB = b.lastLogin?.toDate?.() || new Date(b.lastLogin);
+      return dateB - dateA;
+    });
+  } else if (sortBy === 'sessions') {
+    userList.sort((a, b) => b.totalSessions - a.totalSessions);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content wide" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2><i className="fas fa-users"></i> User Management</h2>
+          <button className="modal-close" onClick={onClose}><i className="fas fa-times"></i></button>
+        </div>
+
+        <div className="modal-body">
+          <div className="user-filters" style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            <div className="input-wrapper" style={{ flex: 1 }}>
+              <i className="fas fa-search"></i>
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ padding: '12px 16px', border: '2px solid var(--black)', borderRadius: '50px' }}>
+              <option value="recent">Most Recent</option>
+              <option value="sessions">Most Sessions</option>
+            </select>
+          </div>
+
+          <div className="user-list">
+            {userList.map((user, i) => (
+              <div key={i} className="user-card cdc-card white" style={{ marginBottom: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="user-avatar">
+                      <i className="fas fa-user"></i>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '700' }}>{user.displayName}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>{user.email}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="stat-pill" style={{ display: 'inline-block' }}>
+                      <div className="stat-pill-value" style={{ fontSize: '14px' }}>{user.totalSessions} sessions</div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                      Last: {formatDateTime(user.lastLogin)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== DATA REPOSITORY MODAL ====================
+const DataRepositoryModal = ({ isOpen, onClose, driveFiles, onFileView }) => {
+  const [activeFolder, setActiveFolder] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  if (!isOpen) return null;
+
+  const folders = ['ALL', ...Object.keys(DRIVE_FOLDERS)];
+
+  let filteredFiles = driveFiles;
+  if (activeFolder !== 'ALL') {
+    filteredFiles = filteredFiles.filter(f => f.folder === activeFolder);
+  }
+  if (searchTerm) {
+    filteredFiles = filteredFiles.filter(f =>
+      f.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content wide" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2><i className="fas fa-database"></i> Data Repository</h2>
+          <button className="modal-close" onClick={onClose}><i className="fas fa-times"></i></button>
+        </div>
+
+        <div className="modal-body">
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            <div className="input-wrapper" style={{ flex: 1 }}>
+              <i className="fas fa-search"></i>
+              <input
+                type="text"
+                placeholder="Search documents..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="folder-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {folders.map(folder => (
+              <button
+                key={folder}
+                onClick={() => setActiveFolder(folder)}
+                className={`stat-pill ${activeFolder === folder ? '' : 'inactive'}`}
+                style={{
+                  cursor: 'pointer',
+                  background: activeFolder === folder ? 'var(--lime)' : 'var(--white)',
+                  border: '2px solid var(--black)'
+                }}
+              >
+                <div className="stat-pill-value" style={{ fontSize: '12px' }}>
+                  {folder.replace(/_/g, ' ')}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-3">
+            {filteredFiles.map(file => (
+              <div
+                key={file.id}
+                className="doc-card"
+                onClick={() => onFileView(file)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="doc-card-icon">
+                  <i className={`fas fa-file-${file.mimeType?.includes('pdf') ? 'pdf' : file.mimeType?.includes('presentation') ? 'powerpoint' : file.mimeType?.includes('spreadsheet') ? 'excel' : 'alt'}`}></i>
+                </div>
+                <div className="doc-card-info">
+                  <div className="doc-card-name">{file.name}</div>
+                  <div className="doc-card-meta">{file.folder.replace(/_/g, ' ')}</div>
+                  {file.modifiedTime && <div className="doc-card-date">{formatDate(file.modifiedTime)}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {filteredFiles.length === 0 && (
+            <div className="cdc-card white" style={{ textAlign: 'center', padding: '40px' }}>
+              <i className="fas fa-folder-open" style={{ fontSize: '48px', color: '#ccc', marginBottom: '16px' }}></i>
+              <p>No documents found</p>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== MAIN DASHBOARD ====================
 const Dashboard = ({ user, isAdmin }) => {
   const [activeSection, setActiveSection] = useState('overview');
@@ -736,33 +642,24 @@ const Dashboard = ({ user, isAdmin }) => {
   const [driveFiles, setDriveFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   // Modals
-  const [ocrModalOpen, setOcrModalOpen] = useState(false);
   const [dataCardsEditorOpen, setDataCardsEditorOpen] = useState(false);
-  
-  // Chatbot
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { type: 'bot', text: 'Hello! I\'m your CDC AI Assistant. Ask me anything about Crepdog Crew - financials, stores, growth plans, or investment thesis.' }
-  ]);
-  const [chatInput, setChatInput] = useState('');
-  const chatRef = useRef(null);
+  const [userManagementOpen, setUserManagementOpen] = useState(false);
+  const [dataRepositoryOpen, setDataRepositoryOpen] = useState(false);
 
   // Load Data
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Save session
         const location = await getLocationData();
-        saveSession(user.uid, { 
-          email: user.email, 
+        saveSession(user.uid, {
+          email: user.email,
           displayName: user.displayName,
-          location, 
-          startTime: new Date().toISOString() 
+          location,
+          startTime: new Date().toISOString()
         }).catch(console.error);
 
-        // Load data based on role
         if (isAdmin) {
           const [sessionsData, cardsData, activitiesData] = await Promise.all([
             getInvestorSessions().catch(() => []),
@@ -777,7 +674,6 @@ const Dashboard = ({ user, isAdmin }) => {
           setDataCards(cardsData);
         }
 
-        // Fetch Drive files
         await fetchDriveFiles();
       } catch (err) {
         console.error('Error loading data:', err);
@@ -821,31 +717,6 @@ const Dashboard = ({ user, isAdmin }) => {
     window.open(file.webViewLink, '_blank');
   };
 
-  // Chatbot functions
-  const sendChat = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages(prev => [...prev, { type: 'user', text: chatInput }]);
-    const answer = findAIAnswer(chatInput);
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { type: 'bot', text: answer }]);
-    }, 400);
-    setChatInput('');
-  };
-
-  const askAI = (q) => {
-    setChatMessages(prev => [...prev, { type: 'user', text: q }]);
-    const answer = findAIAnswer(q);
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { type: 'bot', text: answer }]);
-    }, 400);
-  };
-
-  useEffect(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
   // Navigation items
   const navItems = [
     { id: 'overview', label: 'Overview', icon: 'fa-home' },
@@ -853,10 +724,42 @@ const Dashboard = ({ user, isAdmin }) => {
     { id: 'stores', label: 'Stores', icon: 'fa-store' },
     { id: 'documents', label: 'Documents', icon: 'fa-folder' },
     ...(isAdmin ? [
-      { id: 'investors', label: 'Investors', icon: 'fa-users' },
+      { id: 'admin', label: 'Admin Panel', icon: 'fa-cog' },
       { id: 'analytics', label: 'Analytics', icon: 'fa-chart-bar' }
     ] : [])
   ];
+
+  // Session analytics for admin
+  const getSessionStats = () => {
+    const today = new Date();
+    const todaySessions = sessions.filter(s => {
+      const d = s.createdAt?.toDate?.() || new Date(s.createdAt);
+      return d.toDateString() === today.toDateString();
+    });
+
+    const thisWeek = sessions.filter(s => {
+      const d = s.createdAt?.toDate?.() || new Date(s.createdAt);
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return d >= weekAgo;
+    });
+
+    const uniqueEmails = new Set(sessions.map(s => s.email));
+    const locationCounts = sessions.reduce((acc, s) => {
+      const city = s.location?.city || 'Unknown';
+      acc[city] = (acc[city] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      total: sessions.length,
+      today: todaySessions.length,
+      thisWeek: thisWeek.length,
+      unique: uniqueEmails.size,
+      topLocations: Object.entries(locationCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+    };
+  };
 
   if (loading) {
     return (
@@ -866,6 +769,8 @@ const Dashboard = ({ user, isAdmin }) => {
       </div>
     );
   }
+
+  const sessionStats = isAdmin ? getSessionStats() : null;
 
   return (
     <div className="app">
@@ -877,7 +782,6 @@ const Dashboard = ({ user, isAdmin }) => {
         </button>
       </div>
 
-      {/* Mobile Overlay */}
       {mobileMenuOpen && <div className="sidebar-overlay active" onClick={() => setMobileMenuOpen(false)}></div>}
 
       {/* Sidebar */}
@@ -892,9 +796,9 @@ const Dashboard = ({ user, isAdmin }) => {
 
         <nav className="nav">
           {navItems.map(item => (
-            <button 
-              key={item.id} 
-              onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }} 
+            <button
+              key={item.id}
+              onClick={() => { setActiveSection(item.id); setMobileMenuOpen(false); }}
               className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
             >
               <div className="icon"><i className={`fas ${item.icon}`}></i></div>
@@ -905,16 +809,19 @@ const Dashboard = ({ user, isAdmin }) => {
 
         <div className="sidebar-footer">
           {isAdmin && (
-            <>
-              <button className="sidebar-btn" onClick={() => setOcrModalOpen(true)}>
-                <i className="fas fa-file-alt"></i> OCR Reader
-              </button>
+            <div style={{ marginBottom: '12px' }}>
               <button className="sidebar-btn" onClick={() => setDataCardsEditorOpen(true)}>
                 <i className="fas fa-th-large"></i> Edit Cards
               </button>
-            </>
+              <button className="sidebar-btn" onClick={() => setUserManagementOpen(true)}>
+                <i className="fas fa-users"></i> Users
+              </button>
+              <button className="sidebar-btn" onClick={() => setDataRepositoryOpen(true)}>
+                <i className="fas fa-database"></i> Repository
+              </button>
+            </div>
           )}
-          
+
           <div className="user-section">
             <div className="user-info">
               <div className="user-avatar">
@@ -976,7 +883,26 @@ const Dashboard = ({ user, isAdmin }) => {
               </div>
             </div>
 
-            {/* Problem Cards - from original design */}
+            {/* Revenue Growth Chart */}
+            <div className="cdc-card white" style={{ marginBottom: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Revenue Growth Trajectory</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `₹${value} Cr`} />
+                    <Bar dataKey="revenue" fill="#C0E529" stroke="#000" strokeWidth={2} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Problem Cards */}
             <div className="grid grid-3">
               <div className="problem-card">
                 <div className="problem-badge"><i className="fas fa-exclamation"></i></div>
@@ -996,43 +922,45 @@ const Dashboard = ({ user, isAdmin }) => {
             </div>
 
             <div className="grid grid-2" style={{ marginTop: '24px' }}>
-              {/* Recent Documents */}
+              {/* Channel Mix Chart */}
               <div className="cdc-card white">
                 <div className="chart-header">
-                  <div className="chart-title">Recent Documents</div>
+                  <div className="chart-title">Channel Revenue Mix (FY26 YTD)</div>
                   <div className="chart-underline"></div>
                 </div>
-                {driveFiles.slice(0, 5).map(file => (
-                  <div 
-                    key={file.id} 
-                    className="metric-row" 
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleFileView(file)}
-                  >
-                    <div className="metric-row-icon">
-                      <i className={`fas fa-file-${file.mimeType?.includes('pdf') ? 'pdf' : 'alt'}`}></i>
-                    </div>
-                    <div className="metric-row-label">{file.name}</div>
-                    <div className="metric-row-value">{file.folder.replace(/_/g, ' ')}</div>
-                  </div>
-                ))}
+                <div style={{ height: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={channelData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ₹${value}Cr`}
+                      >
+                        {channelData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={2} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => `₹${value} Cr`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
-              {/* Store Performance */}
+              {/* Store Performance Summary */}
               <div className="cdc-card white">
                 <div className="chart-header">
                   <div className="chart-title">Store Performance</div>
                   <div className="chart-underline"></div>
                 </div>
-                {[
-                  { name: 'Delhi', revenue: '₹11.9 Cr', cm2: '14.8%' },
-                  { name: 'Mumbai', revenue: '₹9.2 Cr', cm2: '17.5%' },
-                  { name: 'Hyderabad', revenue: '₹3.5 Cr', cm2: '18.2%' }
-                ].map((store, i) => (
+                {storePerformanceData.map((store, i) => (
                   <div key={i} className="metric-row">
                     <div className="metric-row-icon"><i className="fas fa-store"></i></div>
-                    <div className="metric-row-label">{store.name}</div>
-                    <div className="metric-row-value">{store.revenue}</div>
+                    <div className="metric-row-label">{store.store}</div>
+                    <div className="metric-row-value">₹{store.revenue} Cr</div>
                   </div>
                 ))}
               </div>
@@ -1062,7 +990,29 @@ const Dashboard = ({ user, isAdmin }) => {
               </div>
             </div>
 
+            {/* Monthly Revenue Comparison */}
+            <div className="cdc-card white" style={{ marginBottom: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Monthly Revenue Comparison (₹ Cr)</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyRevenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `₹${value} Cr`} />
+                    <Legend />
+                    <Area type="monotone" dataKey="fy24" stackId="1" stroke="#6B8E23" fill="#6B8E23" name="FY24" />
+                    <Area type="monotone" dataKey="fy25" stackId="2" stroke="#C0E529" fill="#C0E529" name="FY25" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             <div className="grid grid-2">
+              {/* P&L Highlights */}
               <div className="cdc-card white">
                 <div className="chart-header">
                   <div className="chart-title">P&L Highlights</div>
@@ -1082,6 +1032,30 @@ const Dashboard = ({ user, isAdmin }) => {
                 ))}
               </div>
 
+              {/* Margin Comparison Chart */}
+              <div className="cdc-card white">
+                <div className="chart-header">
+                  <div className="chart-title">Margin Analysis vs Industry</div>
+                  <div className="chart-underline"></div>
+                </div>
+                <div style={{ height: '220px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={profitabilityData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" domain={[0, 50]} />
+                      <YAxis dataKey="metric" type="category" width={100} />
+                      <Tooltip formatter={(value) => `${value}%`} />
+                      <Legend />
+                      <Bar dataKey="value" fill="#C0E529" name="CDC" stroke="#000" strokeWidth={2} />
+                      <Bar dataKey="benchmark" fill="#E5E5E5" name="Industry Avg" stroke="#000" strokeWidth={1} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Ratios & Balance Sheet */}
+            <div className="grid grid-2" style={{ marginTop: '24px' }}>
               <div className="cdc-card white">
                 <div className="chart-header">
                   <div className="chart-title">Key Ratios</div>
@@ -1100,23 +1074,22 @@ const Dashboard = ({ user, isAdmin }) => {
                   </div>
                 ))}
               </div>
-            </div>
 
-            <div className="cdc-card white" style={{ marginTop: '24px' }}>
-              <div className="chart-header">
-                <div className="chart-title">Balance Sheet Highlights (FY24)</div>
-                <div className="chart-underline"></div>
-              </div>
-              <div className="grid grid-4">
+              <div className="cdc-card white">
+                <div className="chart-header">
+                  <div className="chart-title">Balance Sheet (FY24)</div>
+                  <div className="chart-underline"></div>
+                </div>
                 {[
                   { label: 'Cash & Bank', value: '₹6.16 Cr' },
                   { label: 'Inventory', value: '₹4.2 Cr' },
                   { label: 'Receivables', value: '₹1.8 Cr' },
                   { label: 'Total Assets', value: '₹14.5 Cr' }
-                ].map((item, i) => (
-                  <div key={i} className="stat-pill" style={{ textAlign: 'center' }}>
-                    <div className="stat-pill-label">{item.label}</div>
-                    <div className="stat-pill-value">{item.value}</div>
+                ].map((row, i) => (
+                  <div key={i} className="metric-row">
+                    <div className="metric-row-icon"><i className="fas fa-wallet"></i></div>
+                    <div className="metric-row-label">{row.label}</div>
+                    <div className="metric-row-value">{row.value}</div>
                   </div>
                 ))}
               </div>
@@ -1127,13 +1100,35 @@ const Dashboard = ({ user, isAdmin }) => {
         {/* ==================== STORES SECTION ==================== */}
         {activeSection === 'stores' && (
           <div className="section active">
+            {/* Store Revenue Chart */}
+            <div className="cdc-card white" style={{ marginBottom: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Store Revenue & CM2 Margins (FY26 YTD)</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={storePerformanceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="store" />
+                    <YAxis yAxisId="left" orientation="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="revenue" fill="#C0E529" name="Revenue (₹ Cr)" stroke="#000" strokeWidth={2} />
+                    <Bar yAxisId="right" dataKey="cm2" fill="#6B8E23" name="CM2 %" stroke="#000" strokeWidth={2} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             <div className="grid grid-3">
               <div className="store-card">
                 <div className="store-header">
                   <div className="store-icon"><i className="fas fa-store"></i></div>
                   <div>
                     <div className="store-name">Delhi</div>
-                    <div className="store-meta">Connaught Place • Since 2021</div>
+                    <div className="store-meta">Connaught Place | Since 2021</div>
                   </div>
                 </div>
                 <div className="store-revenue">₹11.9 Cr</div>
@@ -1156,7 +1151,7 @@ const Dashboard = ({ user, isAdmin }) => {
                   <div className="store-icon"><i className="fas fa-store"></i></div>
                   <div>
                     <div className="store-name">Mumbai</div>
-                    <div className="store-meta">Bandra • Since 2022</div>
+                    <div className="store-meta">Bandra | Since 2022</div>
                   </div>
                 </div>
                 <div className="store-revenue">₹9.2 Cr</div>
@@ -1179,7 +1174,7 @@ const Dashboard = ({ user, isAdmin }) => {
                   <div className="store-icon"><i className="fas fa-store"></i></div>
                   <div>
                     <div className="store-name">Hyderabad</div>
-                    <div className="store-meta">Jubilee Hills • Since 2023</div>
+                    <div className="store-meta">Jubilee Hills | Since 2023</div>
                   </div>
                 </div>
                 <div className="store-revenue">₹3.5 Cr</div>
@@ -1219,6 +1214,33 @@ const Dashboard = ({ user, isAdmin }) => {
                 </div>
               </div>
             </div>
+
+            {/* Category Mix */}
+            <div className="cdc-card white" style={{ marginTop: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Product Category Mix</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div style={{ height: '250px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}%`}
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value}%`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1238,9 +1260,9 @@ const Dashboard = ({ user, isAdmin }) => {
 
             <div className="grid grid-3">
               {driveFiles.map(file => (
-                <div 
-                  key={file.id} 
-                  className="doc-card" 
+                <div
+                  key={file.id}
+                  className="doc-card"
                   onClick={() => handleFileView(file)}
                   style={{ cursor: 'pointer' }}
                 >
@@ -1264,60 +1286,100 @@ const Dashboard = ({ user, isAdmin }) => {
           </div>
         )}
 
-        {/* ==================== INVESTORS SECTION (Admin) ==================== */}
-        {activeSection === 'investors' && isAdmin && (
+        {/* ==================== ADMIN PANEL SECTION ==================== */}
+        {activeSection === 'admin' && isAdmin && (
           <div className="section active">
             <div className="stat-pills">
               <div className="stat-pill">
                 <div className="stat-pill-label">Total Sessions</div>
-                <div className="stat-pill-value">{sessions.length}</div>
+                <div className="stat-pill-value">{sessionStats.total}</div>
               </div>
               <div className="stat-pill">
-                <div className="stat-pill-label">Unique Investors</div>
-                <div className="stat-pill-value">{new Set(sessions.map(s => s.email)).size}</div>
+                <div className="stat-pill-label">Today</div>
+                <div className="stat-pill-value">{sessionStats.today}</div>
               </div>
               <div className="stat-pill">
-                <div className="stat-pill-label">Today's Visits</div>
-                <div className="stat-pill-value">
-                  {sessions.filter(s => {
-                    const d = s.createdAt?.toDate?.() || new Date(s.createdAt);
-                    return d.toDateString() === new Date().toDateString();
-                  }).length}
-                </div>
+                <div className="stat-pill-label">This Week</div>
+                <div className="stat-pill-value">{sessionStats.thisWeek}</div>
+              </div>
+              <div className="stat-pill">
+                <div className="stat-pill-label">Unique Users</div>
+                <div className="stat-pill-value">{sessionStats.unique}</div>
+              </div>
+            </div>
+
+            {/* Admin Quick Actions */}
+            <div className="cdc-card white" style={{ marginBottom: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Admin Quick Actions</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button className="btn-primary" onClick={() => setDataCardsEditorOpen(true)}>
+                  <i className="fas fa-th-large"></i> Edit Data Cards
+                </button>
+                <button className="btn-primary" onClick={() => setUserManagementOpen(true)}>
+                  <i className="fas fa-users"></i> Manage Users
+                </button>
+                <button className="btn-primary" onClick={() => setDataRepositoryOpen(true)}>
+                  <i className="fas fa-database"></i> Data Repository
+                </button>
+                <button className="btn-secondary" onClick={fetchDriveFiles}>
+                  <i className="fas fa-sync-alt"></i> Refresh Data
+                </button>
               </div>
             </div>
 
             <div className="grid grid-2">
+              {/* Recent Sessions */}
               <div className="cdc-card white">
                 <div className="chart-header">
-                  <div className="chart-title">Recent Sessions</div>
+                  <div className="chart-title">Recent Login Sessions</div>
                   <div className="chart-underline"></div>
                 </div>
-                {sessions.slice(0, 10).map((s, i) => (
+                {sessions.slice(0, 8).map((s, i) => (
                   <div key={i} className="metric-row">
                     <div className="metric-row-icon"><i className="fas fa-user"></i></div>
                     <div className="metric-row-label">
-                      <div>{s.email}</div>
+                      <div style={{ fontWeight: '600' }}>{s.email}</div>
                       <small style={{ color: '#666' }}>{formatDateTime(s.createdAt)}</small>
                     </div>
-                    <div className="metric-row-value">{s.location?.city || 'Unknown'}</div>
+                    <div className="metric-row-value" style={{ fontSize: '12px' }}>{s.location?.city || 'Unknown'}</div>
                   </div>
                 ))}
               </div>
 
+              {/* Top Locations */}
               <div className="cdc-card white">
                 <div className="chart-header">
-                  <div className="chart-title">Recent Activity</div>
+                  <div className="chart-title">Login Locations</div>
                   <div className="chart-underline"></div>
                 </div>
+                {sessionStats.topLocations.map(([city, count], i) => (
+                  <div key={i} className="metric-row">
+                    <div className="metric-row-icon"><i className="fas fa-map-marker-alt"></i></div>
+                    <div className="metric-row-label">{city}</div>
+                    <div className="metric-row-value">{count} sessions</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="cdc-card white" style={{ marginTop: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Recent Document Activity</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div className="grid grid-2">
                 {activities.slice(0, 10).map((a, i) => (
                   <div key={i} className="metric-row">
                     <div className="metric-row-icon"><i className="fas fa-eye"></i></div>
                     <div className="metric-row-label">
-                      <div>{a.fileName || a.type}</div>
+                      <div style={{ fontWeight: '600' }}>{a.fileName || a.type}</div>
                       <small style={{ color: '#666' }}>{formatDateTime(a.timestamp)}</small>
                     </div>
-                    <div className="metric-row-value">{a.folder?.replace(/_/g, ' ') || '-'}</div>
+                    <div className="metric-row-value" style={{ fontSize: '11px' }}>{a.folder?.replace(/_/g, ' ') || '-'}</div>
                   </div>
                 ))}
               </div>
@@ -1343,9 +1405,39 @@ const Dashboard = ({ user, isAdmin }) => {
               </div>
             </div>
 
+            {/* Session Trends - could be enhanced with real data */}
+            <div className="cdc-card white" style={{ marginBottom: '24px' }}>
+              <div className="chart-header">
+                <div className="chart-title">Engagement Overview</div>
+                <div className="chart-underline"></div>
+              </div>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={[
+                    { day: 'Mon', sessions: Math.floor(Math.random() * 10) + 5, views: Math.floor(Math.random() * 20) + 10 },
+                    { day: 'Tue', sessions: Math.floor(Math.random() * 10) + 5, views: Math.floor(Math.random() * 20) + 10 },
+                    { day: 'Wed', sessions: Math.floor(Math.random() * 10) + 5, views: Math.floor(Math.random() * 20) + 10 },
+                    { day: 'Thu', sessions: Math.floor(Math.random() * 10) + 5, views: Math.floor(Math.random() * 20) + 10 },
+                    { day: 'Fri', sessions: Math.floor(Math.random() * 10) + 5, views: Math.floor(Math.random() * 20) + 10 },
+                    { day: 'Sat', sessions: Math.floor(Math.random() * 5) + 2, views: Math.floor(Math.random() * 10) + 5 },
+                    { day: 'Sun', sessions: Math.floor(Math.random() * 5) + 2, views: Math.floor(Math.random() * 10) + 5 },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="sessions" stroke="#C0E529" strokeWidth={3} name="Sessions" />
+                    <Line type="monotone" dataKey="views" stroke="#6B8E23" strokeWidth={3} name="Document Views" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Data Cards Grid */}
             <div className="cdc-card white">
               <div className="chart-header">
-                <div className="chart-title">Data Cards</div>
+                <div className="chart-title">Data Cards Overview</div>
                 <div className="chart-underline"></div>
               </div>
               <div className="grid grid-3">
@@ -1361,61 +1453,7 @@ const Dashboard = ({ user, isAdmin }) => {
         )}
       </main>
 
-      {/* AI Chatbot FAB */}
-      <button 
-        className={`chat-fab ${chatOpen ? 'hidden' : ''}`} 
-        onClick={() => setChatOpen(true)}
-      >
-        <i className="fas fa-robot"></i>
-      </button>
-
-      {/* AI Chatbot */}
-      <div className={`chatbot ${chatOpen ? 'active' : ''}`}>
-        <div className="chatbot-header">
-          <div className="chatbot-avatar"><i className="fas fa-robot"></i></div>
-          <div className="chatbot-info">
-            <div className="chatbot-title">CDC AI Assistant</div>
-            <div className="chatbot-subtitle">Ask me anything about CDC</div>
-          </div>
-          <button className="chatbot-close" onClick={() => setChatOpen(false)}>
-            <i className="fas fa-times"></i>
-          </button>
-        </div>
-
-        <div className="chatbot-messages" ref={chatRef}>
-          {chatMessages.map((msg, i) => (
-            <div key={i} className={`chat-msg ${msg.type}`}>
-              <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: msg.text }}></div>
-            </div>
-          ))}
-        </div>
-
-        <div className="chat-suggestions">
-          <div className="chat-suggestions-title">Quick Questions</div>
-          <button className="chat-btn" onClick={() => askAI('Revenue')}>Revenue</button>
-          <button className="chat-btn" onClick={() => askAI('Net profit')}>Profit</button>
-          <button className="chat-btn" onClick={() => askAI('Store performance')}>Stores</button>
-          <button className="chat-btn" onClick={() => askAI('10 reasons to invest')}>Why Invest?</button>
-        </div>
-
-        <div className="chatbot-input">
-          <input 
-            value={chatInput} 
-            onChange={(e) => setChatInput(e.target.value)} 
-            onKeyPress={(e) => e.key === 'Enter' && sendChat()} 
-            placeholder="Ask about CDC..." 
-          />
-          <button onClick={sendChat}><i className="fas fa-paper-plane"></i></button>
-        </div>
-      </div>
-
       {/* Modals */}
-      <OCRReaderModal 
-        isOpen={ocrModalOpen} 
-        onClose={() => setOcrModalOpen(false)}
-        onDataExtracted={(data) => console.log('OCR Data:', data)}
-      />
-
       <DataCardsEditor
         isOpen={dataCardsEditorOpen}
         onClose={() => setDataCardsEditorOpen(false)}
@@ -1423,6 +1461,19 @@ const Dashboard = ({ user, isAdmin }) => {
         onSave={saveDataCard}
         onUpdate={updateDataCard}
         onDelete={deleteDataCard}
+      />
+
+      <UserManagementModal
+        isOpen={userManagementOpen}
+        onClose={() => setUserManagementOpen(false)}
+        sessions={sessions}
+      />
+
+      <DataRepositoryModal
+        isOpen={dataRepositoryOpen}
+        onClose={() => setDataRepositoryOpen(false)}
+        driveFiles={driveFiles}
+        onFileView={handleFileView}
       />
     </div>
   );
